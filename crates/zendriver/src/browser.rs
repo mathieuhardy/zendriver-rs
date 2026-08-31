@@ -2069,7 +2069,16 @@ async fn per_tab_session(
     let Some(host_port) = browser.debug_host_port.as_deref() else {
         return flat;
     };
-    let ws_url = format!("ws://{host_port}/devtools/page/{target_id}");
+    let scheme = if browser
+        .ws_url
+        .as_deref()
+        .is_some_and(|u| u.starts_with("wss://"))
+    {
+        "wss"
+    } else {
+        "ws"
+    };
+    let ws_url = format!("{scheme}://{host_port}/devtools/page/{target_id}");
     match zendriver_transport::connect(&ws_url).await {
         Ok(conn) => SessionHandle::new_root(conn),
         Err(err) => {
