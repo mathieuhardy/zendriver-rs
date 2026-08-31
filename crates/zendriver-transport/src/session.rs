@@ -58,9 +58,10 @@ impl SessionHandle {
         }
     }
 
-    /// The CDP `sessionId` this handle is scoped to, or `""` for a root session.
-    pub fn session_id(&self) -> &str {
-        self.inner.session_id.as_deref().unwrap_or("")
+    /// The CDP `sessionId` this handle is scoped to, or `None` for a root
+    /// (per-target) session whose frames carry no `sessionId` on the wire.
+    pub fn session_id(&self) -> Option<&str> {
+        self.inner.session_id.as_deref()
     }
 
     /// Whether this is a root (per-target connection) handle.
@@ -146,7 +147,7 @@ mod tests {
         let conn = spawn_actor(ws);
         let sess = SessionHandle::new_root(conn.clone());
         assert!(sess.is_root());
-        assert_eq!(sess.session_id(), "");
+        assert_eq!(sess.session_id(), None);
 
         let call = tokio::spawn({
             let s = sess.clone();

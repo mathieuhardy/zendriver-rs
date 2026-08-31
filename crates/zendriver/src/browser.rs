@@ -2243,11 +2243,13 @@ impl TargetObserver for TabRegistrar {
 
                     if needs_actor {
                         let handle = builder.start();
-                        browser
-                            .session_intercept_handles
-                            .lock()
-                            .await
-                            .insert(new_session_for_intercept.session_id().to_string(), handle);
+                        browser.session_intercept_handles.lock().await.insert(
+                            new_session_for_intercept
+                                .session_id()
+                                .unwrap_or_default()
+                                .to_string(),
+                            handle,
+                        );
                     }
                 }
 
@@ -6921,7 +6923,7 @@ mod tests {
         {
             let frames = parent_tab.inner.frames.read().await;
             let placeholder = frames.get("F_OOPIF").expect("placeholder seeded");
-            assert_eq!(placeholder.session().session_id(), "S1");
+            assert_eq!(placeholder.session().session_id(), Some("S1"));
         }
 
         // Emit the OOPIF attach event. The actor will dispatch the
@@ -6955,7 +6957,7 @@ mod tests {
             let frames = parent_tab.inner.frames.read().await;
             if frames
                 .get("F_OOPIF")
-                .is_some_and(|f| f.session().session_id() == "S2")
+                .is_some_and(|f| f.session().session_id() == Some("S2"))
             {
                 break;
             }
@@ -6972,7 +6974,7 @@ mod tests {
             .expect("OOPIF frame registered on parent");
         assert_eq!(
             oopif.session().session_id(),
-            "S2",
+            Some("S2"),
             "OOPIF frame must carry the child session, not the parent's",
         );
         assert_eq!(oopif.id(), "F_OOPIF");

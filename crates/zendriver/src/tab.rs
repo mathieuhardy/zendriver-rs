@@ -525,7 +525,7 @@ impl Tab {
     /// need a specific `targetId` should use [`Tab::new_for_test_with_target`].
     #[cfg(test)]
     pub(crate) fn new_for_test(session: SessionHandle) -> Self {
-        let target_id = format!("test-target-{}", session.session_id());
+        let target_id = format!("test-target-{}", session.session_id().unwrap_or("root"));
         Self::new(
             session,
             std::sync::Weak::new(),
@@ -846,10 +846,16 @@ impl Tab {
     /// ```
     #[must_use]
     pub fn cookies(&self) -> crate::CookieJar {
-        crate::CookieJar::for_session(
-            self.inner.session.connection().clone(),
-            self.inner.session.session_id(),
-        )
+        let conn = self.inner.session.connection().clone();
+        // A root (per-tab socket) session carries no `sessionId`: its commands
+        // already dispatch directly to the tab's target, so a browser-scope jar
+        // on that connection resolves against the right `BrowserContext`.
+        // Passing the `""` sentinel to `for_session` would put `"sessionId": ""`
+        // on the wire, which is rejected by Chrome.
+        match self.inner.session.session_id() {
+            Some(sid) => crate::CookieJar::for_session(conn, sid),
+            None => crate::CookieJar::new(conn),
+        }
     }
 
     /// Per-tab `localStorage` accessor.
